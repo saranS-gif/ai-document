@@ -494,10 +494,6 @@ a { color: inherit; }
   .risk-card-heading { gap: 6px; }
   .risk-source { width: 100%; margin-left: 0; }
   .clarify-question { align-items: flex-start; flex-direction: column; gap: 4px; }
-  .clause-explorer { grid-template-columns: 1fr; }
-  .clause-navigation { display: flex; max-height: 130px; overflow: auto; border-right: 0; border-bottom: 1px solid var(--line); }
-  .clause-nav-item { width: auto; min-width: 106px; min-height: 54px; border-right: 1px solid #eff0ed; border-bottom: 0; }
-  .clause-nav-item > svg { display: none; }
   .clause-reading { min-height: 135px; padding: 13px; }
   .suggested-questions { gap: 6px; }
   .suggested-questions button { min-height: 33px; font-size: 8px; }
@@ -520,4 +516,68 @@ a { color: inherit; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+@media (max-width: 760px) {
+  html, body {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  body { overflow-x: clip; }
+
+  .workspace,
+  .upload-column,
+  .results-column,
+  .results-column > * {
+    min-width: 0;
+  }
+
+  .report-filename { max-width: 100%; }
+  .toolbar-actions { flex-wrap: wrap; }
+
+  .overview-summary,
+  .risk-reason,
+  .risk-impact,
+  .clarify-question p,
+  .evidence-quote p,
+  .clause-reading > p,
+  .message-body > p,
+  .chat-quote p {
+    overflow-wrap: anywhere;
+  }
+
+  .clause-explorer { grid-template-columns: minmax(0, 1fr); }
+  .clause-navigation {
+    display: flex;
+    max-height: 130px;
+    overflow: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .clause-nav-item {
+    width: auto;
+    min-width: 106px;
+    min-height: 54px;
+    border-right: 1px solid #eff0ed;
+    border-bottom: 0;
+  }
+  .clause-nav-item > svg { display: none; }
+
+  .welcome-panel,
+  .processing-panel {
+    min-height: 423px;
+  }
+
+  button,
+  select {
+    max-width: 100%;
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 540px) {
+  .app-shell { width: 100%; }
+  .question-form { min-width: 0; }
+  .question-form input { min-width: 0; }
 }
