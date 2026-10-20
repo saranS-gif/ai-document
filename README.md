@@ -3,7 +3,7 @@
 A Next.js + TypeScript MVP based on the supplied hackathon brief.
 
 ## MVP scope implemented
-- Upload a text-based PDF (up to 8 MB)
+- Upload a text-based PDF (up to 4 MB, within Vercel Functions' request-body limit)
 - Extract selectable PDF text and create numbered clauses
 - Plain-language summary and key terms
 - High / medium / low flags with source quote, reason, and question to ask
@@ -43,14 +43,15 @@ If your Gemini account does not support the model in `.env.local`, set `GEMINI_M
 ## Deploy to Vercel
 1. Push the project to a private or public GitHub repository. Never commit `.env.local`.
 2. Import the repository in Vercel.
-3. Add `GEMINI_API_KEY` and `GEMINI_MODEL` in Vercel Project Settings → Environment Variables.
-4. Deploy.
+3. Set the Vercel Node.js version to 20.x or newer (PDF.js 4 requires Node.js 20+).
+4. Add `GEMINI_API_KEY` and `GEMINI_MODEL` in Vercel Project Settings → Environment Variables. `SESSION_TOKEN_SECRET` is optional but recommended; if omitted, the Gemini key signs short-lived Q&A session tokens.
+5. Deploy, then verify a selectable-text PDF at or below 4 MB, Q&A, and the function logs for safe PDF runtime diagnostics.
 
 ## Important MVP limitations
 - Scanned/image-only PDFs and OCR are not implemented.
 - Rental is the recommended first contract type; loan/job options are included as experimental paths and need test coverage.
 - Clause boundaries are inferred from extracted PDF headings, numbered sections, and paragraphs; review them against the original document.
-- Analysis is bounded to 8 MB, 150 pages, 60,000 extracted characters, and 100 clauses. Larger documents are rejected rather than silently truncated.
+- Analysis is bounded to 4 MB, 150 pages, 60,000 extracted characters, and 100 clauses. Larger documents are rejected rather than silently truncated.
 - Q&A uses a signed, expiring, in-memory browser session token; no contract database is used.
 - The model/provider receives extracted contract text to produce analysis. Do not upload confidential contracts unless you are comfortable with the provider's applicable data handling.
 - This is not legal advice. It does not decide whether a clause is legal or whether a user should sign.

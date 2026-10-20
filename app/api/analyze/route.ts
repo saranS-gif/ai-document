@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { GoogleGenerativeAI, SchemaType, type Schema } from "@google/generative-ai";
 import { z } from "zod";
 import { createDocumentToken } from "@/lib/contract-session";
+import { classifyPdfLoadFailure, openPdfDocument } from "@/lib/pdf-processing";
 import {
   ModelAnalysisSchema,
   extractClauses,
@@ -14,7 +15,8 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_FILE_BYTES = 4 * 1024 * 1024;
+const MAX_REQUEST_BYTES = MAX_FILE_BYTES + 64 * 1024;
 const MAX_DOCUMENT_CHARS = 60_000;
 const MAX_PAGES = 150;
 const MAX_CLAUSES = 100;
@@ -73,10 +75,21 @@ export async function POST(req: Request) {
   try {
     const key = process.env.GEMINI_API_KEY;
     const modelId = process.env.GEMINI_MODEL;
-    if (!key) throw new RequestError("GEMINI_API_KEY is missing. Add it to .env.local and restart the server.", 500);
-    if (!modelId) throw new RequestError("GEMINI_MODEL is missing. Set it to a model currently available to your API account.", 500);
+    if (!key || !modelId) {
+      throw new RequestError("The AI service is not configured. Set GEMINI_API_KEY and GEMINI_MODEL in the server environment.", 500);
+    }
 
-    const form = await req.formData();
+    const contentLength = Number(req.headers.get("content-length"));
+    if (Number.isFinite(contentLength) && contentLength > MAX_REQUEST_BYTES) {
+      throw new RequestError("This upload exceeds the 4 MB PDF limit.", 413);
+    }
+
+    let form: FormData;
+    try {
+      form = await req.formData();
+    } catch {
+      throw new RequestError("The upload request could not be read. Please choose a PDF and try again.", 400);
+    }
     const file = form.get("file");
     const requestedType = String(form.get("contractType") || "auto");
     if (!CONTRACT_TYPES.includes(requestedType as (typeof CONTRACT_TYPES)[number])) {
@@ -88,7 +101,7 @@ export async function POST(req: Request) {
     }
     if (!(file instanceof File)) throw new RequestError("Please upload a PDF file.", 400);
     if (file.size === 0) throw new RequestError("The uploaded PDF is empty.", 400);
-    if (file.size > MAX_FILE_BYTES) throw new RequestError("This MVP supports PDFs up to 8 MB.", 413);
+    if (file.size > MAX_FILE_BYTES) throw new RequestError("This MVP supports PDFs up to 4 MB.", 413);
     if (file.type !== "application/pdf" && !file.name.toLowerCase().endsWith(".pdf")) {
       throw new RequestError("Only PDF files are supported in this MVP.", 400);
     }
@@ -98,12 +111,14 @@ export async function POST(req: Request) {
       throw new RequestError("The uploaded file is not a readable PDF.", 422);
     }
 
-    let pdf: Awaited<ReturnType<(typeof import("pdfjs-dist/legacy/build/pdf.mjs"))["getDocument"]>>["promise"] extends Promise<infer T> ? T : never;
+    let pdf: Awaited<ReturnType<typeof openPdfDocument>>;
     try {
-      const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-      pdf = await pdfjs.getDocument({ data: bytes, useSystemFonts: true }).promise;
-    } catch {
-      throw new RequestError("The PDF is damaged, password-protected, or cannot be opened.", 422);
+      pdf = await openPdfDocument(bytes);
+    } catch (error) {
+      const failure = classifyPdfLoadFailure(error);
+      const errorName = error instanceof Error ? error.name : "UnknownError";
+      console.error("ClauseClear PDF loading failed:", { errorName, kind: failure.kind });
+      throw new RequestError(failure.message, failure.status);
     }
 
     const totalPages = pdf.numPages;

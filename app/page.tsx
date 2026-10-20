@@ -120,10 +120,10 @@ export default function Home() {
       setError("This file is empty. Choose a readable PDF.");
       return;
     }
-    if (candidate.size > 8 * 1024 * 1024) {
+    if (candidate.size > 4 * 1024 * 1024) {
       setFile(null);
       if (inputRef.current) inputRef.current.value = "";
-      setError("This PDF is larger than the 8 MB limit. Choose a smaller file.");
+      setError("This PDF is larger than the 4 MB limit. Choose a smaller file.");
       return;
     }
     setFile(candidate);
@@ -318,7 +318,7 @@ export default function Home() {
                 <strong>Drop your PDF here</strong>
                 <span id="upload-hint">or choose a file from your device</span>
                 <label className="button-secondary file-picker" htmlFor="contract-file">Choose PDF</label>
-                <small>PDF only <span aria-hidden="true">·</span> Up to 8 MB <span aria-hidden="true">·</span> Selectable text required</small>
+                <small>PDF only <span aria-hidden="true">·</span> Up to 4 MB <span aria-hidden="true">·</span> Selectable text required</small>
               </div>
             ) : (
               <div className="file-preview">

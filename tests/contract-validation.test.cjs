@@ -11,6 +11,7 @@ const {
   verifyQuote
 } = require("../lib/contract-validation.ts");
 const { createDocumentToken, readDocumentToken } = require("../lib/contract-session.ts");
+const { classifyPdfLoadFailure } = require("../lib/pdf-processing.ts");
 
 const source = [
   "1. Rent",
@@ -142,4 +143,29 @@ test("rejects oversized extracted text instead of silently truncating it", () =>
   const longText = "x".repeat(81);
   assert.equal(getDocumentTextError(longText, 80), "document_too_long");
   assert.equal(getDocumentTextError(longText, 100), null);
+});
+
+test("classifies password-protected PDFs separately from unreadable PDFs", () => {
+  const error = new Error("Password required");
+  error.name = "PasswordException";
+  assert.deepEqual(classifyPdfLoadFailure(error), {
+    kind: "password",
+    status: 422,
+    message: "This PDF is password-protected. Remove the password and upload it again."
+  });
+});
+
+test("reports PDF.js runtime failures as server errors, not damaged PDFs", () => {
+  const workerError = new Error("Setting up fake worker failed");
+  assert.equal(classifyPdfLoadFailure(workerError).kind, "runtime");
+  assert.equal(classifyPdfLoadFailure(workerError).status, 500);
+
+  const unknownError = new Error("Unexpected parser failure");
+  assert.equal(classifyPdfLoadFailure(unknownError).kind, "runtime");
+  assert.equal(classifyPdfLoadFailure(unknownError).status, 500);
+
+  const invalidPdf = new Error("Invalid PDF");
+  invalidPdf.name = "InvalidPDFException";
+  assert.equal(classifyPdfLoadFailure(invalidPdf).kind, "invalid_pdf");
+  assert.equal(classifyPdfLoadFailure(invalidPdf).status, 422);
 });
